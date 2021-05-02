@@ -1,6 +1,8 @@
 package com.example.myapplication;
 
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.EditText;
@@ -23,6 +25,7 @@ public class LoginActivity extends AppCompatActivity {
     private EditText editTextEmailLogin;
     private EditText editTextPasswordLogin;
     private final ExecutorService executorService = Executors.newFixedThreadPool(1);
+    private SharedPreferences sharedPref;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -43,8 +46,6 @@ public class LoginActivity extends AppCompatActivity {
             editTextPasswordLogin.setError("Debes ingresar una contraseña");
         } else {
             AuthService authService = initiation();
-            System.out.println("email omee "+email);
-            System.out.println("passs omee "+password);
             verify(authService, email, password);
         }
     }
@@ -55,13 +56,12 @@ public class LoginActivity extends AppCompatActivity {
             public void run() {
                 try {
                     Response<Token> response = authService.login(new LoginWrapper(email, password)).execute();
-                    System.out.println("el response es..."+response.isSuccessful());
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
                             if (response.isSuccessful()) {
                                 Token token = response.body();
-                                System.out.println("logramos obtener el token o no?" + token.getAccessToken());
+                                saveTokenOnSharedPreference(token);
                                 Intent intent = new Intent(getApplicationContext(), MainActivity.class);
                                 startActivity(intent);
                             } else {
@@ -76,6 +76,15 @@ public class LoginActivity extends AppCompatActivity {
                 }
             }
         });
+    }
+
+    public  void saveTokenOnSharedPreference(Token token){
+        sharedPref =  getSharedPreferences("token", Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPref.edit();
+        editor.putString("token", token.getAccessToken());
+        editor.commit();
+        editTextPasswordLogin.setText("");
+        editTextEmailLogin.setText("");
     }
 
     public AuthService initiation() {
